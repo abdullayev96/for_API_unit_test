@@ -1,6 +1,7 @@
 from django.test import TestCase
-from category.models import *
-from category.serializers import *
+from category.models import Book, Category, Author
+from category.serializers import BookSerializer, AuthorSerializers, CategorySerializers
+
 
 
 class CategorySerializerTest(TestCase):
@@ -70,3 +71,58 @@ class AuthorSerializerTest(TestCase):
         updated_author = serializer.save()
         self.assertEqual(updated_author.full_name, "World History")
         self.assertEqual(updated_author.bio, "All")
+
+
+
+
+class BookSerializerTest(TestCase):
+    def setUp(self):
+        self.category = Category.objects.create(name="Fantasy")
+        self.author = Author.objects.create(full_name="J.R.R. Tolkien", bio="LOTR muallifi")
+
+    def test_valid_data(self):
+        data = {
+            "name": "The Hobbit",
+            "title": "The Hobbit haqida",
+            "category": self.category.id,  # ForeignKey ID bilan
+            "author": self.author.id
+        }
+        serializer = BookSerializer(data=data)
+        self.assertTrue(serializer.is_valid())
+        book = serializer.save()
+        self.assertIsInstance(book, Book)
+        self.assertEqual(book.name, "The Hobbit")
+        self.assertEqual(book.category, self.category)
+        self.assertEqual(book.author, self.author)
+
+    def test_invalid_data(self):
+        data = {
+            "name": "",  # bo'sh name invalid
+            "title": "Some title",
+            "category": self.category.id,
+            "author": self.author.id
+        }
+        serializer = BookSerializer(data=data)
+        self.assertFalse(serializer.is_valid())
+        self.assertIn("name", serializer.errors)
+
+    def test_update_book(self):
+        book = Book.objects.create(
+            name="Old Name",
+            title="Old Title",
+            category=self.category,
+            author=self.author
+        )
+        data = {
+            "name": "New Name",
+            "title": "New Title",
+            "category": self.category.id,
+            "author": self.author.id
+        }
+        serializer = BookSerializer(book, data=data)
+        self.assertTrue(serializer.is_valid())
+        updated_book = serializer.save()
+        self.assertEqual(updated_book.name, "New Name")
+        self.assertEqual(updated_book.title, "New Title")
+
+
